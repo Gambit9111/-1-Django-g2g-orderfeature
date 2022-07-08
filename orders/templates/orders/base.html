@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'orders/css/bootstrap.min.css' %}" type="text/css">
+    <title>Bootstrap demo</title>
+  </head>
+  <body class="bg-light">
+
+    <div class="container p-3 bg-light">
+
+        <div class="container-fluid bg-muted">
+            <div class="row">
+                <div class="col text-center">
+                    {% load static %}
+                    <img src="{% static 'orders/img/g2glogo.PNG' %}" alt="logo" class="img-fluid">
+                </div>
+                <div class="col">
+                </div>
+                <div class="col">
+                    <div class="row">
+                        <div class="col">
+                            <div class="d-grid">
+                                <button class="btn btn-dark" type="button"></button>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="d-grid">
+                                <button class="btn btn-dark" type="button"></button>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="d-grid">
+                                <button class="btn btn-dark" type="button"></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="container-fluid p-5 bg-light">
+
+            <div class="row">
+                <div class="col border">
+                    <div class="d-grid">
+                        <a href="{% url 'new' %}" class="btn btn-dark" role="button">New <span class="badge">-</span></a>
+                    </div>
+                </div>
+                <div class="col border">
+                    <div class="d-grid">
+                        <a href="{% url 'preparing' %}" class="btn btn-dark .disabled" role="button">Preparing <span class="badge">-</span></a>
+                    </div>
+                </div>
+                <div class="col border">
+                    <div class="d-grid">
+                        <a href="{% url 'completed' %}" class="btn btn-dark" role="button">Completed <span class="badge">-</span></a>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="row">
+                <div class="col border">
+                    <div class="">
+                        <span class="p-5"></span>
+                    </div>
+                </div>
+            </div>
+
+
+            {% block content %}
+
+            {% endblock %}
+        </div>
+    </div>
+
+            <div class="row text-center">
+            <div class="col border">
+                Zopa
+            </div>
+            </div>
+
+    {% load static %}
+    <script src="{% static 'orders/js/bootstrap.min.js' %}" type="text/javascript"></script>
+  </body>
+</html>

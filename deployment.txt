@@ -1,0 +1,326 @@
+1)  initial server setup
+
+    sudo apt update && sudo apt upgrade && sudo reboot 
+
+    timedatectl set-timezone 'Europe/Vilnius'
+    hostnamectl set-hostname trady-django-2
+    logout
+
+    adduser tren #duhydze41
+    adduser tren sudo
+    adduser tren www-data
+    mkdir -p /var/www/
+    chgrp -R www-data /var/www/
+    chmod -R g+rwxs /var/www/
+    ls -al
+    reboot
+    exit
+    ssh-copy-id tren@212.71.239.98  # run this from local pc
+    ssh tren@212.71.239.98
+    sudo chmod -R 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys   # sets some permisions on public keys
+    sudo nano /etc/ssh/sshd_config
+        PermitRootLogin no
+        PasswordAuthentication yes (for vscode to work)
+        AddressFamily Inet
+    sudo systemctl restart sshd
+
+2) vs code server setup
+
+    on local mashine install remote ssh
+    open config file
+    
+        Host linode
+        HostName linode
+        User tren
+        ServerAliveInterval 60
+        ServerAliveCountMax 10
+
+
+3) install python 3.9
+
+    install python 3.9
+	sudo add-apt-repository ppa:deadsnakes
+	apt-get -qq install python3.9 python3.9-venv python3.9-dev python3-pip tree sqlite3
+	python3.9 --version
+    python3.9 -m pip install --upgrade pip
+    mkdir dev & cd dev
+
+4) copy code to the server
+
+    ## run this on local mashina
+	a) mkdir deploy
+	b ) cp requirements.txt deploy 
+	c) cp -r core deploy
+    c) cp -r orders deploy
+	c) cp db.sqlite3 deploy
+    c) cp maange.py deploy
+	d) find -name *.pyc -delete   #delete .pyc files defore deploying to a server
+	e) find -name __pycache__ -delete  #same with cache
+	g) scp -r deploy tren@188.166.2.34:/home/tren/    # deploy code
+	h) ssh into the server and into deploy folder
+
+5) configure production settings on a server
+
+    replace secret key in settings with
+
+    import os
+    # ...
+    try:
+        SECRET_KEY = os.environ["SECRET_KEY"]
+    except KeyError as e:
+        raise RuntimeError("Could not find a SECRET_KEY in environment") from e
+
+    $ echo "export SECRET_KEY='$(openssl rand -hex 40)'" > .DJANGO_SECRET_KEY
+    $ source .DJANGO_SECRET_KEY
+    cat .DJANGO_SECRET_KEY'
+
+    
+    alias GET='http --follow --timeout 6'
+
+    ALLOWED_HOSTS = ['212.71.253.161', 'trady.pro', 'www.trady.pro']
+    python manage.py runserver 0.0.0.0:8000
+    visit your server, you should see your site running
+
+    pip install httpie
+    sudo mkdir -pv config/gunicorn
+    sudo nano config/gunicorn/dev.py
+        """Gunicorn *development* config file"""
+
+        # Django WSGI application path in pattern MODULE_NAME:VARIABLE_NAME
+        wsgi_app = "project.wsgi:application"
+        # The granularity of Error log outputs
+        loglevel = "debug"
+        # The number of worker processes for handling requests
+        workers = 2
+        # The socket to bind
+        bind = "0.0.0.0:8000"
+        # Restart workers when code changes (development only!)
+        reload = True
+        # Write access and error info to /var/log
+        accesslog = errorlog = "/var/log/gunicorn/dev.log"
+        # Redirect stdout/stderr to log file
+        capture_output = True
+        # PID file so you can easily fetch process ID
+        pidfile = "/var/run/gunicorn/dev.pid"
+        # Daemonize the Gunicorn process (detach & enter background)
+        daemon = True
+
+        sudo mkdir -pv /var/{log,run}/gunicorn/
+        sudo chown -cR tren:tren /var/{log,run}/gunicorn/
+        pwd
+        $ source .DJANGO_SECRET_KEY
+        $ gunicorn -c config/gunicorn/dev.py
+
+        tail -f /var/log/gunicorn/dev.log
+        http://www.supersecure.codes:8000/myapp/
+
+        Incorporating Nginx
+
+        $ sudo apt-get install -y 'nginx=1.18.*'
+        $ nginx -v  # Display version info
+        nginx version: nginx/1.18.0 (Ubuntu)
+
+        (venv) tren@localhost:~/deploy$ sudo systemctl start nginx
+        (venv) tren@localhost:~/deploy$ sudo systemctl status nginx
+
+
+
+        sudo nano /etc/nginx/sites-available/trady
+        server_tokens               off;
+        access_log                  /var/log/nginx/trady.access.log;
+        error_log                   /var/log/nginx/trady.error.log;
+
+        # This configuration will be changed to redirect to HTTPS later
+        server {
+        server_name               .trady.pro;
+        listen                    80;
+        location / {
+            proxy_pass              http://localhost:8000;
+            proxy_set_header        Host $host;
+        }
+        }
+
+        sudo service nginx configtest /etc/nginx/sites-available/trady
+
+        $ cd /etc/nginx/sites-enabled
+        $ cd /etc/nginx/sites-enabled
+        $ # Note: replace 'supersecure' with your domain
+        $ sudo ln -s ../sites-available/supersecure .
+        $ sudo systemctl restart nginx
+
+        alias GET='http --follow --timeout 6'
+        GET http://trady.pro/
+
+        settings.py
+        # Note: Replace 'supersecure.codes' with your domain
+        STATIC_ROOT = "/var/www/trady.pro/static"
+
+        $ sudo mkdir -pv /var/www/supersecure.codes/static/
+        $ sudo chown -cR tren:www-data /var/www/supersecure.codes/ #galimai sito net nereik
+
+        python manage.py collectstatic
+
+        Finally, add a location variable for /static in /etc/nginx/sites-available/supersecure, your site configuration file for Nginx:
+
+        server {
+        location / {
+            proxy_pass          http://localhost:8000;
+            proxy_set_header    Host $host;
+            proxy_set_header    X-Forwarded-Proto $scheme;
+        }
+
+        location /static {
+            autoindex on;
+            alias /var/www/supersecure.codes/static/;
+        }
+        }
+
+
+        # project/settings.py
+        DEBUG = False
+
+        sudo systemctl restart nginx
+
+        as ahujelinu kad viskas veikia cia gi pz yra
+
+
+        # File: /etc/nginx/nginx.conf
+        ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+        sudo nginx -t
+
+        sudo snap install --classic certbot
+        sudo certbot --nginx --rsa-key-size 4096 --no-redirect
+        sudo systemctl reload nginx
+
+        # Nginx configuration: /etc/nginx/sites-available/supersecure
+        server {
+        server_name               .supersecure.codes;
+        listen                    80;
+        return                    307 https://$host$request_uri;
+        }
+
+        server {
+        location / {
+            proxy_pass              http://localhost:8000;
+            proxy_set_header        Host $host;
+        }
+
+        location /static {
+            autoindex on;
+            alias /var/www/supersecure.codes/static/;
+        }
+
+        listen 443 ssl;
+        ssl_certificate /etc/letsencrypt/live/www.supersecure.codes/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/www.supersecure.codes/privkey.pem;
+        include /etc/letsencrypt/options-ssl-nginx.conf;
+        ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+        }
+
+
+        sudo service nginx configtest /etc/nginx/sites-available/trady
+        sudo systemctl reload nginx
+
+        # Add to project/settings.py
+        SECURE_HSTS_SECONDS = 30  # Unit is seconds; *USE A SMALL VALUE FOR TESTING!*
+        SECURE_HSTS_PRELOAD = True
+        SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+        SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+        SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+        SECURE_BROWSER_XSS_FILTER = True
+        SECURE_CONTENT_TYPE_NOSNIFF = True
+
+          location / {
+            proxy_pass          http://localhost:8000;
+            proxy_set_header    Host $host;
+            proxy_set_header    X-Forwarded-Proto $scheme;
+        }
+
+        sudo systemctl reload nginx
+
+        GET -ph https://trady.pro
+
+        python -m pip install django-csp
+        # project/settings.py
+        MIDDLEWARE += ["csp.middleware.CSPMiddleware"]
+
+        SECURE_HSTS_SECONDS = 2_592_000
+
+        config/gunicorn/prod.py:
+
+        import multiprocessing
+
+        # Django WSGI application path in pattern MODULE_NAME:VARIABLE_NAME
+        wsgi_app = "project.wsgi:application"
+        # The number of worker processes for handling requests
+        workers = multiprocessing.cpu_count() * 2 + 1
+        # The socket to bind
+        bind = "0.0.0.0:8000"
+        # Write access and error info to /var/log
+        accesslog = "/var/log/gunicorn/access.log"
+        errorlog = "/var/log/gunicorn/error.log"
+        # Redirect stdout/stderr to log file
+        capture_output = True
+        # PID file so you can easily fetch process ID
+        pidfile = "/var/run/gunicorn/prod.pid"
+        # Daemonize the Gunicorn process (detach & enter background)
+        daemon = True
+
+        sudo killall gunicorn
+        gunicorn -c config/gunicorn/prod.py
+
+        # File: /etc/nginx/sites-available/supersecure
+        # This file inherits from the http directive of /etc/nginx/nginx.conf
+
+        # Disable emitting nginx version in the "Server" response header field
+        server_tokens             off;
+
+        # Use site-specific access and error logs
+        access_log                /var/log/nginx/supersecure.access.log;
+        error_log                 /var/log/nginx/supersecure.error.log;
+
+        # Return 444 status code & close connection if no Host header present
+        server {
+        listen                  80 default_server;
+        return                  444;
+        }
+
+        # Redirect HTTP to HTTPS
+        server {
+        server_name             .supersecure.codes;
+        listen                  80;
+        return                  307 https://$host$request_uri;
+        }
+
+        server {
+
+        # Pass on requests to Gunicorn listening at http://localhost:8000
+        location / {
+            proxy_pass            http://localhost:8000;
+            proxy_set_header      Host $host;
+            proxy_set_header      X-Forwarded-Proto $scheme;
+            proxy_set_header      X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_redirect        off;
+        }
+
+        # Serve static files directly
+        location /static {
+            autoindex             on;
+            alias                 /var/www/supersecure.codes/static/;
+        }
+
+        listen 443 ssl;
+        ssl_certificate /etc/letsencrypt/live/www.supersecure.codes/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/www.supersecure.codes/privkey.pem;
+        include /etc/letsencrypt/options-ssl-nginx.conf;
+        ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+        }
+
+        Configure firewall
+
+        https://securityheaders.com/
+        https://www.ssllabs.com/
+        https://adamj.eu/tech/2019/04/10/how-to-score-a+-for-security-headers-on-your-django-website/
+
+        sudo killall gunicorn
+        gunicorn -c config/gunicorn/prod.py

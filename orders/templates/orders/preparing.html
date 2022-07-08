@@ -1,0 +1,34 @@
+{% extends 'orders/base.html'%}
+
+
+{% block content %}
+<div class="row">
+    <div class="col border">
+        <table class="table table-light text-center">
+            <thead>
+                <tr>
+                <th scope="col">Product</th>
+                <th scope="col">_</th>
+                <th scope="col">Quantity</th>
+                <th scope="col">Price</th>
+                </tr>
+            </thead>
+            <tbody class="fw-semibold">
+                {% for order in orders %}
+                    <tr>
+                    <td>
+                        <div class="d-grid px-5">
+                            <a href="{% url 'single' order.id %}" class="btn btn-outline-secondary fw-bolder" role="button">{{order.product.name}}</a>
+                        </div>
+                    </td>
+                    <td scope="col">_</td>
+                    <td>x{{order.quantity}}</td>
+                    <td>{{order.get_total_price}}$</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
